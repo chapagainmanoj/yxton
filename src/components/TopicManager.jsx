@@ -3,18 +3,20 @@ import { TopicsContext } from "../contexts/TopicsContext";
 import TopicCard from "./TopicCard";
 
 const TopicManager = () => {
-    const { topics, addTopic, updateTopic, deleteTopic } = useContext(TopicsContext);
+    const { topics, addTopic, updateTopic, deleteTopic, fetchNotes, addNote, updateNote, deleteNote } = useContext(TopicsContext);
     const [selected, setSelected] = useState(topics.length ? 0 : null);
     const [showAddForm, setShowAddForm] = useState(false);
     const [newTopic, setNewTopic] = useState("");
 
-    const handleAddTopicSave = () => {
+    const handleAddTopicSave = async () => {
         const name = (newTopic || "").trim();
         if (!name) return;
-        addTopic(name);
+        const created = await addTopic(name);
         setNewTopic("");
         setShowAddForm(false);
-        setSelected(topics.length);
+        // select newly created topic
+        const idx = topics.length; // old length; new topic appended at end
+        setSelected(idx);
     };
 
     const handleAddTopicCancel = () => {
@@ -22,13 +24,9 @@ const TopicManager = () => {
         setShowAddForm(false);
     };
 
-    const handleDeleteTopic = (index) => {
-        deleteTopic(index);
-        if (selected === index) {
-            setSelected(null);
-        } else if (selected > index) {
-            setSelected(selected - 1);
-        }
+    const handleDeleteTopic = async (id) => {
+        await deleteTopic(id);
+        setSelected(null);
     };
 
     return (
@@ -54,7 +52,7 @@ const TopicManager = () => {
                         {topics.length === 0 && <p className="text-gray-500">No topics yet</p>}
                         {topics.map((t, i) => (
                             <div
-                                key={i}
+                                key={t.id}
                                 className={`p-3 rounded flex items-center justify-between cursor-pointer ${selected === i ? "bg-blue-50 border-l-4 border-blue-400" : "hover:bg-gray-50"}`}
                                 onClick={() => setSelected(i)}
                             >
@@ -65,7 +63,7 @@ const TopicManager = () => {
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        handleDeleteTopic(i);
+                                        handleDeleteTopic(t.id);
                                     }}
                                     className="text-red-600 hover:text-red-800 px-3 py-2 rounded-md"
                                     aria-label={`Delete topic ${t.name}`}
@@ -114,8 +112,12 @@ const TopicManager = () => {
                     ) : (
                         <TopicCard
                             topic={topics[selected]}
-                            onUpdateName={(newName) => updateTopic(selected, newName)}
-                            onDelete={() => handleDeleteTopic(selected)}
+                            onUpdateName={(id, newName) => updateTopic(id, newName)}
+                            onDelete={(id) => handleDeleteTopic(id)}
+                            onAddNote={(topicId, text) => addNote(topicId, text)}
+                            onUpdateNote={(topicId, noteId, text) => updateNote(topicId, noteId, text)}
+                            onDeleteNote={(topicId, noteId) => deleteNote(topicId, noteId)}
+                            onLoadNotes={(topicId) => fetchNotes(topicId)}
                         />
                     )}
                 </main>

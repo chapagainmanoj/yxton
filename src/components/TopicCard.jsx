@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from "react";
 import NoteItem from "./NoteItem";
 
-const TopicCard = ({ topic, onUpdateName, onDelete, onAddNote, onUpdateNote, onDeleteNote }) => {
+const TopicCard = ({ topic, onUpdateName, onDelete, onAddNote, onUpdateNote, onDeleteNote, onLoadNotes }) => {
     const [newNote, setNewNote] = useState("");
     const [isEditingName, setIsEditingName] = useState(false);
     const [topicName, setTopicName] = useState("");
 
-    // keep local name in sync when topic changes (and avoid crash if topic is undefined)
     useEffect(() => {
         setTopicName(topic?.name || "");
         setNewNote("");
         setIsEditingName(false);
+        if (topic && !topic.notes) {
+            onLoadNotes?.(topic.id);
+        }
     }, [topic]);
 
-    // if topic is not provided yet, render a placeholder (avoids reading .name of undefined)
     if (!topic) {
         return (
             <div className="bg-white p-6 rounded-lg shadow">
@@ -22,10 +23,10 @@ const TopicCard = ({ topic, onUpdateName, onDelete, onAddNote, onUpdateNote, onD
         );
     }
 
-    const handleAddNote = () => {
+    const handleAddNote = async () => {
         const text = (newNote || "").trim();
         if (!text) return;
-        onAddNote?.(text);
+        await onAddNote?.(topic.id, text);
         setNewNote("");
     };
 
@@ -39,7 +40,7 @@ const TopicCard = ({ topic, onUpdateName, onDelete, onAddNote, onUpdateNote, onD
                         onChange={(e) => setTopicName(e.target.value)}
                         onBlur={() => {
                             const next = (topicName || "").trim();
-                            if (next && next !== topic.name) onUpdateName?.(next);
+                            if (next && next !== topic.name) onUpdateName?.(topic.id, next);
                             setIsEditingName(false);
                         }}
                         autoFocus
@@ -82,13 +83,13 @@ const TopicCard = ({ topic, onUpdateName, onDelete, onAddNote, onUpdateNote, onD
             </div>
 
             <div className="mt-3 space-y-2">
-                {(topic.notes || []).length === 0 && <p className="text-gray-500">No notes yet</p>}
-                {(topic.notes || []).map((n, idx) => (
+                {!(topic.notes || []).length && <p className="text-gray-500">No notes yet</p>}
+                {(topic.notes || []).map((n) => (
                     <NoteItem
-                        key={idx}
+                        key={n.id}
                         note={n}
-                        onUpdate={(updatedText) => onUpdateNote?.(topic.id, idx, updatedText)}
-                        onDelete={() => onDeleteNote?.(topic.id, idx)}
+                        onUpdate={(updatedText) => onUpdateNote?.(topic.id, n.id, updatedText)}
+                        onDelete={() => onDeleteNote?.(topic.id, n.id)}
                     />
                 ))}
             </div>
